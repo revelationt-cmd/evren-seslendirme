@@ -1,0 +1,4 @@
+.env
+cikti/
+__pycache__/
+*.pyc

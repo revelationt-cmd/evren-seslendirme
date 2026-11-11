@@ -1,0 +1,6 @@
+# Her satır bir parça. [sahne|sessizlik_sn] öneki isteğe bağlı.
+# İpucu: Büyük harfli kısaltmaları (EVREN) ve rakamları yazıyla yazın; model onları harf harf ya da rakam rakam okuyabiliyor.
+[giris|0.8] Merhaba! Bu ses, Evren platformundaki Türkçe ses modeliyle, tamamen Türkiye'deki sunucularda üretildi.
+[nasil] Metni satır satır yazıyorsunuz, betik her satırı seslendirip aralarına kısa sessizlikler koyuyor.
+[sayilar] Tarihleri yazıyla yazmak en güvenlisi: yirmi dokuz Ekim, bin dokuz yüz yirmi üç, saat dokuzu beş geçe.
+[kapanis|1.5] Sonra Remotion bu sesi ve zamanlamaları kullanarak animasyonu kelime kelime senkronluyor.
