@@ -97,7 +97,7 @@ def main() -> None:
     ap.add_argument("--ara", type=float, default=0.5, help="Parçalar arası varsayılan sessizlik (sn)")
     ap.add_argument("--bas", type=float, default=0.5, help="Baştaki sessizlik (sn)")
     ap.add_argument("--hiz", type=float, default=1.0,
-                    help="Konuşma hızı (speed). 0.96 = %%4 yavaş; tanıtım cümlelerinde daha sakin bir ton verir")
+                    help="Konuşma hızı (speed). 1.0 normal, 0.9 = %%10 yavaş")
     ap.add_argument("--normalize", action="store_true",
                     help="Rakam, tarih, saat ve kısaltmaları Türkçe okunuşa çevir (turkce-normalize gerekir)")
     ap.add_argument("--telaffuz", type=Path,

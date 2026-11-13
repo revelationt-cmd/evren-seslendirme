@@ -81,7 +81,8 @@ Kendi özel adlarınız için `--telaffuz sozluk.json` (biçim: [ornek/telaffuz.
 sözlüğüne eklenir. Modele giden metin `parcalar.json` içinde `okunan` alanına yazılır; altyazıda yine senaryo kullanılır.
 
 **Hız (`--hiz`).** voxcpm2 OpenAI'daki `speed` alanını kabul ediyor; süre hızla orantılı değişiyor
-(aynı cümle 1.0'da 4,8 sn, 0.96'da 5,0 sn, 0.8'de 6,0 sn). Tanıtım cümlelerinde `--hiz 0.96` (%4 yavaş) daha sakin bir ton verir.
+(aynı cümle 1.0'da 4,8 sn, 0.96'da 5,0 sn, 0.8'de 6,0 sn). %4 yavaşlatmada (`0.96`) belirgin bir fark duymadık;
+daha sakin bir anlatım isteniyorsa `0.9` civarı denenebilir.
 
 ### 2. Altyazı
 
