@@ -1,0 +1,6 @@
+# --normalize ile denemek için: rakamlar, tarih, saat ve kısaltmalar olduğu gibi yazıldı.
+# python seslendir.py ornek/ham_metin.txt --normalize --telaffuz ornek/telaffuz.json --cikti cikti/ham.mp3
+[giris|0.8] Merhaba! Bu ses, EVREN platformundaki Türkçe ses modeliyle, tamamen Türkiye'deki sunucularda üretildi.
+[tarih] Cumhuriyet 29.10.1923 tarihinde ilan edildi, toplantı saat 09:05'te başlıyor.
+[kisaltma] TBMM'de bugün %18 KDV ve 1.250,50 TL'lik bütçe konuşuldu.
+[kapanis|1.5] Sonra Remotion bu sesi ve zamanlamaları kullanarak animasyonu senkronluyor.

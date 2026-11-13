@@ -9,8 +9,13 @@ Girdi metin dosyasında her boş olmayan satır bir parçadır. İsteğe bağlı
     <cikti>.mp3                 birleştirilmiş, ses seviyesi normalize edilmiş seslendirme
     <cikti>.parcalar.json       her parçanın başlangıç/bitiş ms'i (Remotion sahne zamanlaması için)
 
+İsteğe bağlı metin normalizasyonu (--normalize): rakam, tarih, saat ve kısaltmalar modele gitmeden
+Türkçe okunuşa çevrilir ("14:30'da" -> "on dört otuzda"). turkce-normalize paketini kullanır:
+    pip install turkce-normalize
+
 Örnek:
     python seslendir.py ornek/metin.txt --ses deniz --cikti ../public/evren-ornek.mp3
+    python seslendir.py ornek/ham_metin.txt --normalize --telaffuz ornek/telaffuz.json --hiz 0.96
 """
 from __future__ import annotations
 
@@ -48,10 +53,25 @@ def oku(yol: Path, varsayilan_ara: float) -> list[dict]:
     return parcalar
 
 
-def seslendir(metin: str, ses: str, tarif: str | None, hedef: Path) -> None:
+def normalizer(telaffuz_yolu: Path | None):
+    """turkce-normalize ile metni okunur hale getiren fonksiyon döndürür."""
+    try:
+        from turkce_normalize import VARSAYILAN_SOZLUK, normalize, sozluk_birlestir
+    except ImportError:
+        sys.exit("--normalize için turkce-normalize paketi gerekli: pip install turkce-normalize")
+    sozluk = VARSAYILAN_SOZLUK
+    if telaffuz_yolu:
+        ek = json.loads(telaffuz_yolu.read_text(encoding="utf-8"))
+        sozluk = sozluk_birlestir(VARSAYILAN_SOZLUK, ek)
+    return lambda metin: normalize(metin, telaffuz=sozluk, cografi=False)
+
+
+def seslendir(metin: str, ses: str, tarif: str | None, hiz: float, hedef: Path) -> None:
     govde = {"model": "voxcpm2", "input": metin, "voice": ses, "response_format": "wav"}
     if tarif:
         govde["instructions"] = tarif
+    if hiz != 1.0:
+        govde["speed"] = hiz
     veri, basliklar = istek("/audio/speech", json_govde=govde)
     if not veri.startswith(b"RIFF"):
         sys.exit(f"Beklenen WAV gelmedi ({basliklar.get('Content-Type')}): {veri[:200]!r}")
@@ -76,12 +96,28 @@ def main() -> None:
     ap.add_argument("--cikti", type=Path, default=Path("cikti/seslendirme.mp3"))
     ap.add_argument("--ara", type=float, default=0.5, help="Parçalar arası varsayılan sessizlik (sn)")
     ap.add_argument("--bas", type=float, default=0.5, help="Baştaki sessizlik (sn)")
+    ap.add_argument("--hiz", type=float, default=1.0,
+                    help="Konuşma hızı (speed). 0.96 = %%4 yavaş; tanıtım cümlelerinde daha sakin bir ton verir")
+    ap.add_argument("--normalize", action="store_true",
+                    help="Rakam, tarih, saat ve kısaltmaları Türkçe okunuşa çevir (turkce-normalize gerekir)")
+    ap.add_argument("--telaffuz", type=Path,
+                    help="Ek telaffuz sözlüğü (JSON: {\"Remotion\": \"Rimoşın\"}); --normalize ile birlikte")
     a = ap.parse_args()
 
     if not shutil.which("ffmpeg") or not shutil.which("ffprobe"):
         sys.exit("ffmpeg ve ffprobe PATH üzerinde olmalı.")
+    if not 0.25 <= a.hiz <= 4.0:
+        sys.exit("--hiz 0.25 ile 4.0 arasında olmalı.")
+    if a.telaffuz and not a.normalize:
+        sys.exit("--telaffuz yalnız --normalize ile kullanılır.")
 
     parcalar = oku(a.metin, a.ara)
+    if a.normalize:
+        okunur = normalizer(a.telaffuz)
+        for p in parcalar:
+            p["okunan"] = okunur(p["metin"])
+            if len(p["okunan"]) > 4096:
+                sys.exit(f"'{p['sahne']}' parçası normalizasyondan sonra 4096 karakteri aşıyor; satırı bölün.")
     a.cikti.parent.mkdir(parents=True, exist_ok=True)
     gecici = a.cikti.parent / f".{a.cikti.stem}-parcalar"
     gecici.mkdir(exist_ok=True)
@@ -92,15 +128,20 @@ def main() -> None:
 
     for i, p in enumerate(parcalar):
         # Aynı metin+ses tekrar istenirse API'ye yeniden gitme (kota dostu önbellek)
-        imza = hashlib.sha1(f"{a.ses}|{a.tarif}|{p['metin']}".encode("utf-8")).hexdigest()[:12]
+        okunan = p.get("okunan", p["metin"])
+        hiz_imza = "" if a.hiz == 1.0 else f"|{a.hiz}"  # hız verilmezse eski önbellek geçerli kalır
+        imza = hashlib.sha1(f"{a.ses}|{a.tarif}|{okunan}{hiz_imza}".encode("utf-8")).hexdigest()[:12]
         ham = gecici / f"{imza}.wav"
         if not ham.exists():
-            seslendir(p["metin"], a.ses, a.tarif, ham)
+            seslendir(okunan, a.ses, a.tarif, a.hiz, ham)
         norm = gecici / f"n{i:03d}.wav"
         ffmpeg("-i", str(ham), "-ar", str(SR), "-ac", "1", str(norm))
         d = sure(norm)
-        bilgi.append({"i": i, "sahne": p["sahne"], "metin": p["metin"],
-                      "startMs": round(t * 1000), "endMs": round((t + d) * 1000)})
+        kayit = {"i": i, "sahne": p["sahne"], "metin": p["metin"],
+                 "startMs": round(t * 1000), "endMs": round((t + d) * 1000)}
+        if okunan != p["metin"]:
+            kayit["okunan"] = okunan  # modele giden metin; altyazıda yine senaryo (metin) kullanılır
+        bilgi.append(kayit)
         liste.append(norm)
         if p["ara"] > 0:
             liste.append(sessiz(f"s{i:03d}.wav", p["ara"]))
